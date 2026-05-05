@@ -113,6 +113,13 @@ routing:
       - name: account_management
         threshold: 0.72
         candidates: ["billing information", "subscription management"]
+      # Embedding rules also accept an optional `query_modality` field
+      # (default `"text"`). Image- and audio-modality rules require a
+      # multimodal embedding model under
+      # `global.model_catalog.embeddings.semantic.embedding_config.model_type`,
+      # which is omitted from this minimal canonical example. See
+      # `website/docs/tutorials/signal/learned/embedding.md` for a worked
+      # image-modality example that includes the model_type setting.
 
   projections:
     partitions:
