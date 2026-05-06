@@ -34,6 +34,9 @@ func NewQdrantStore(cfg *QdrantConfig, ttlSeconds int, asyncWrites bool) (*Qdran
 	if cfg == nil {
 		return nil, fmt.Errorf("qdrant config is required")
 	}
+	if cfg.Host == "" {
+		return nil, fmt.Errorf("qdrant host is required")
+	}
 
 	port := cfg.Port
 	if port == 0 {

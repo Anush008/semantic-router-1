@@ -21,7 +21,7 @@ func NewStorage(cfg *Config) (Storage, error) {
 func newStorageBackend(backend string, cfg *Config) (Storage, error) {
 	switch backend {
 	case "memory":
-		return NewMemoryStore(max(200, cfg.MaxBodyBytes), cfg.TTLSeconds), nil
+		return NewMemoryStore(200, cfg.TTLSeconds), nil
 
 	case "redis":
 		if cfg.Redis == nil {

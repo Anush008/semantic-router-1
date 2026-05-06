@@ -94,8 +94,15 @@ func NewQdrantCache(opts QdrantCacheOptions) (*QdrantCache, error) {
 	return c, nil
 }
 
+func (c *QdrantCache) connTimeout() time.Duration {
+	if c.cfg != nil && c.cfg.ConnectTimeout > 0 {
+		return time.Duration(c.cfg.ConnectTimeout) * time.Second
+	}
+	return 30 * time.Second
+}
+
 func (c *QdrantCache) ensureCollection() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), c.connTimeout())
 	defer cancel()
 
 	exists, err := c.client.CollectionExists(ctx, c.collectionName)
@@ -197,7 +204,7 @@ func (c *QdrantCache) expiresAt(ttlSeconds int) int64 {
 func (c *QdrantCache) IsEnabled() bool { return c.enabled }
 
 func (c *QdrantCache) CheckConnection() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), c.connTimeout())
 	defer cancel()
 	_, err := c.client.ListCollections(ctx)
 	if err != nil {
