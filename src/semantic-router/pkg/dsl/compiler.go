@@ -597,6 +597,24 @@ func (c *Compiler) compileRoutes() {
 			}
 		}
 
+		// Compile EMIT directives. Slice ordering is preserved so decompilation
+		// is stable.
+		seenEmitKinds := make(map[string]bool, len(r.Emits))
+		for _, e := range r.Emits {
+			if e == nil {
+				continue
+			}
+			if seenEmitKinds[e.Kind] {
+				c.addError(e.Pos, "ROUTE %s EMIT: duplicate EMIT kind %q in the same route. Each kind may appear at most once", r.Name, e.Kind)
+				continue
+			}
+			seenEmitKinds[e.Kind] = true
+			if !c.validateEmitForCompile(r, e) {
+				continue
+			}
+			decision.Emits = append(decision.Emits, compileEmitDecl(e))
+		}
+
 		c.config.Decisions = append(c.config.Decisions, decision)
 	}
 }
@@ -1429,4 +1447,69 @@ func valueToInterface(v Value) interface{} {
 	default:
 		return nil
 	}
+}
+
+func (c *Compiler) validateEmitForCompile(r *RouteDecl, e *EmitDecl) bool {
+	if e == nil {
+		return false
+	}
+	context := fmt.Sprintf("ROUTE %s EMIT", r.Name)
+	if !supportedEmitKinds[e.Kind] {
+		c.addError(e.Pos, "%s: unknown EMIT kind %q. Supported kinds: retention", context, e.Kind)
+		return false
+	}
+	if e.Kind != emitKindRetention {
+		return true
+	}
+	ok := true
+	for _, issue := range retentionRawFieldDiagnostics(e, context) {
+		c.addError(issue.pos, "%s", issue.message)
+		ok = false
+	}
+	if e.Retention == nil {
+		return ok
+	}
+	if e.Retention.TTLTurns != nil && *e.Retention.TTLTurns < 0 {
+		c.addError(e.Pos, "%s retention: ttl_turns must be >= 0, got %d", context, *e.Retention.TTLTurns)
+		ok = false
+	}
+	if e.Retention.Drop != nil && *e.Retention.Drop && e.Retention.TTLTurns != nil && *e.Retention.TTLTurns > 0 {
+		c.addError(e.Pos, "%s retention: drop=true conflicts with ttl_turns=%d. Use one or the other", context, *e.Retention.TTLTurns)
+		ok = false
+	}
+	return ok
+}
+
+// compileEmitDecl lowers a resolved EmitDecl into the config.EmitDirective
+// surface consumed by the runtime + canonical YAML round-trip.
+func compileEmitDecl(e *EmitDecl) config.EmitDirective {
+	if e == nil {
+		return config.EmitDirective{}
+	}
+	out := config.EmitDirective{Kind: e.Kind}
+	if e.Retention != nil {
+		out.Retention = &config.RetentionDirective{
+			Drop:                  clonePtrBool(e.Retention.Drop),
+			TTLTurns:              clonePtrInt(e.Retention.TTLTurns),
+			KeepCurrentModel:      clonePtrBool(e.Retention.KeepCurrentModel),
+			PreferPrefixRetention: clonePtrBool(e.Retention.PreferPrefixRetention),
+		}
+	}
+	return out
+}
+
+func clonePtrBool(p *bool) *bool {
+	if p == nil {
+		return nil
+	}
+	v := *p
+	return &v
+}
+
+func clonePtrInt(p *int) *int {
+	if p == nil {
+		return nil
+	}
+	v := *p
+	return &v
 }
