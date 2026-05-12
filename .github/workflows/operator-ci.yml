@@ -970,7 +970,7 @@ jobs:
               failureThreshold: 60
             config:
               embedding_models:
-                mmbert_model_path: "models/mom-embedding-ultra"
+                mmbert_model_path: "models/mmbert-embed-32k-2d-matryoshka"
                 use_cpu: true
                 embedding_config:
                   model_type: "mmbert"

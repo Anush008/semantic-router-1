@@ -230,6 +230,13 @@ func validateSemanticCacheConfig(cache *vllmv1alpha1.SemanticCacheConfig) error 
 		if cache.Milvus.Connection.Host == "" {
 			return fmt.Errorf("milvus.connection.host is required")
 		}
+	case "qdrant":
+		if cache.Qdrant == nil {
+			return fmt.Errorf("qdrant configuration required when backend_type is 'qdrant'")
+		}
+		if cache.Qdrant.Host == "" {
+			return fmt.Errorf("qdrant.host is required")
+		}
 	case "hybrid":
 		if cache.Milvus == nil {
 			return fmt.Errorf("milvus configuration required for hybrid backend")
@@ -241,7 +248,7 @@ func validateSemanticCacheConfig(cache *vllmv1alpha1.SemanticCacheConfig) error 
 	case "memory", "":
 		// No additional validation needed for memory backend
 	default:
-		return fmt.Errorf("unsupported backend_type: %s (must be one of: memory, redis, valkey, milvus, hybrid)", cache.BackendType)
+		return fmt.Errorf("unsupported backend_type: %s (must be one of: memory, redis, valkey, milvus, qdrant, hybrid)", cache.BackendType)
 	}
 
 	return nil
